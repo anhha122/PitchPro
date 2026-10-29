@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PitchPro Manager - Cộng Đồng Cáp Kèo (Kèo 7/3, Kèo Nước)</title>
+    <style>
+        :root {
+            --bg-color: #f3f7f4; --sidebar-bg: #ffffff; --primary-green: #0a5c36;
+            --primary-green-hover: #064225; --border-color: #e2e8f0; --text-dark: #1e293b;
+            --text-muted: #64748b; --danger-color: #ef4444; --warning-color: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar-left { width: 240px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; transition: width 0.3s ease; z-index: 50; }
+        .sidebar-left.collapsed { width: 80px; align-items: center; padding: 24px 8px; }
+        .sidebar-left.collapsed .brand-full, .sidebar-left.collapsed .brand-subtext { display: none; }
+        .sidebar-left.collapsed .brand-mini { display: block !important; font-size: 24px; color: var(--primary-green); font-weight: 800; text-align: center; }
+        .sidebar-left.collapsed .nav-text { display: none; }
+        .sidebar-left.collapsed .menu-item { justify-content: center; width: 48px; padding: 12px 0; }
+        .sidebar-left.collapsed .btn-add-booking { width: 48px; height: 48px; border-radius: 50%; padding: 0; display: flex; justify-content: center; align-items: center; }
+        .brand { margin-bottom: 32px; padding-left: 8px; white-space: nowrap; overflow: hidden; }
+        .brand-full { color: var(--primary-green); font-size: 24px; font-weight: 800; line-height: 1.2; }
+        .brand-subtext { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+        .menu-list { list-style: none; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; color: var(--text-dark); text-decoration: none; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; }
+        .menu-item.active { background-color: #e6f0eb; color: var(--primary-green); font-weight: 600; border-left: 4px solid var(--primary-green); }
+        .nav-icon { font-size: 16px; }
+        .sidebar-bottom { margin-top: auto; padding-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+        .btn-toggle-sidebar { background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-toggle-sidebar:hover { background-color: #f1f5f9; }
+        .search-box { position: relative; width: 300px; }
+        .search-box input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border-color); border-radius: 20px; background-color: #f8fafc; outline: none; font-size: 14px;}
+        .content-wrapper { flex: 1; display: flex; overflow: hidden; }
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; text-decoration: none;}
+        .btn-primary { background-color: var(--primary-green); color: #ffffff; }
+
+        /* CSS MÀN HÌNH CỘNG ĐỒNG */
+        .community-dashboard { flex: 1; padding: 24px 32px; overflow-y: auto; display: flex; flex-direction: column; max-width: 1200px; margin: 0 auto; width: 100%;}
+        .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;}
+        
+        .match-filters { display: flex; gap: 12px; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); align-items: center;}
+        .filter-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; outline: none; color: var(--text-dark); background: #f8fafc;}
+        
+        .match-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 40px;}
+        .match-card { background: #fff; border-radius: 12px; border: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 16px; transition: 0.2s;}
+        .match-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-2px);}
+        
+        .mc-header { display: flex; justify-content: space-between; align-items: flex-start;}
+        .team-info { display: flex; align-items: center; gap: 12px;}
+        .team-avatar { width: 44px; height: 44px; border-radius: 8px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--primary-green); font-size: 18px;}
+        .team-name { font-size: 16px; font-weight: 700; color: var(--text-dark);}
+        .team-level { font-size: 12px; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: 12px; margin-top: 4px; display: inline-block;}
+        
+        .status-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+        .status-finding { background: #fef3c7; color: #d97706; }
+        .status-matched { background: #d1fae5; color: #059669; }
+
+        .mc-body { background: #f8fafc; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 12px;}
+        .mc-detail-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dark);}
+        .mc-icon { width: 16px; color: var(--text-muted); text-align: center;}
+        .mc-note { font-size: 13px; color: var(--text-muted); font-style: italic; border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 4px;}
+        
+        .mc-footer { display: flex; gap: 10px; margin-top: auto;}
+        .btn-accept { flex: 1; background: var(--primary-green); color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(10, 92, 54, 0.2);}
+        .btn-accept:hover { background: var(--primary-green-hover); transform: translateY(-1px);}
+        .btn-contact { background: #fff; border: 1px solid var(--border-color); color: var(--text-dark); padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;}
+        .btn-contact:hover { background: #f1f5f9; }
+
+        /* CSS MODAL CHUNG */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background: #fff; width: 500px; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto;}
+        .modal-header { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;}
+        .close-modal { cursor: pointer; color: var(--text-muted); font-size: 20px;}
+        .form-group { display: flex; flex-direction: column; gap: 6px;}
+        .form-group label { font-size: 13px; font-weight: 600;}
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; outline: none;}
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px;}
+
+        /* CSS MODAL NHẬN KÈO KẾT HỢP CỌC */
+        .accept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;}
+        .qr-payment-box { background: #fdf2f8; border: 1px dashed #fbcfe8; border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;}
+        .qr-payment-box img { width: 120px; height: 120px; border-radius: 4px; border: 1px solid #fbcfe8;}
+        .deposit-amt { font-size: 20px; font-weight: 800; color: #be185d;}
+        .match-summary { background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 13px; color: var(--text-dark); margin-bottom: 8px;}
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar-left" id="mainSidebar">
+        <div class="brand">
+            <h1 class="brand-full">PitchPro</h1>
+            <h1 class="brand-mini" style="display: none;">P</h1>
+            <p class="brand-subtext">Cơ sở Thể thao Cao cấp</p>
+        </div>
+        <ul class="menu-list">
+            <li><a href="#" class="menu-item"><span class="nav-icon">📊</span> <span class="nav-text">Bảng điều khiển</span></a></li>
+            <li><a href="pitch_list.html" class="menu-item"><span class="nav-icon">⚽</span> <span class="nav-text">Danh sách sân</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">📦</span> <span class="nav-text">Kho hàng</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">👥</span> <span class="nav-text">Nhân viên</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">🏆</span> <span class="nav-text">Giải đấu</span></a></li>
+            <li><a href="comnunity.html" class="menu-item active"><span class="nav-icon">🌐</span> <span class="nav-text">Cộng đồng</span></a></li>
+        </ul>
+        <div class="sidebar-bottom">
+            <a href="pitch_list.html" class="btn btn-primary btn-add-booking" style="width:100%; margin-bottom: 12px; font-size:15px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span class="icon-plus" style="font-size:18px;">+</span> <span class="nav-text">Thêm Đặt Sân</span>
+            </a>
+            <ul class="menu-list">
+                <li><a href="#" class="menu-item" style="padding: 8px 12px;"><span class="nav-icon">⚙️</span> <span class="nav-text">Cài đặt</span></a></li>
+                <li><a href="#" class="menu-item" style="padding: 8px 12px;"><span class="nav-icon">❓</span> <span class="nav-text">Hỗ trợ</span></a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- NỘI DUNG CHÍNH -->
+    <div class="main-container">
+        <div class="topbar">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="search-box"><input type="text" placeholder="Tìm đội bóng..."></div>
+            </div>
+            <button class="btn btn-primary" onclick="openPostModal()" style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">+</span> Đăng tin tìm đối
+            </button>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="community-dashboard">
+                
+                <div class="content-header">
+                    <div>
+                        <h2 style="font-size: 24px; font-weight: 800;">Cộng đồng & Cáp kèo</h2>
+                        <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Nơi các đội bóng giao lưu, tìm đối tác và chia sẻ chi phí sân.</p>
+                    </div>
+                </div>
+
+                <!-- BỘ LỌC -->
+                <div class="match-filters">
+                    <span style="font-weight: 600; font-size: 14px; color: var(--text-dark);">Bộ lọc:</span>
+                    <select class="filter-select" id="filter-type" onchange="filterPosts()">
+                        <option value="all">Loại sân (Tất cả)</option>
+                        <option value="5">Sân 5 người</option>
+                        <option value="7">Sân 7 người</option>
+                    </select>
+                    <select class="filter-select" id="filter-level" onchange="filterPosts()">
+                        <option value="all">Trình độ (Tất cả)</option>
+                        <option value="yếu">Trung bình yếu</option>
+                        <option value="khá">Trung bình khá</option>
+                    </select>
+                    <select class="filter-select" id="filter-status" onchange="filterPosts()">
+                        <option value="finding">Đang tìm đối</option>
+                        <option value="matched">Đã chốt kèo</option>
+                    </select>
+                </div>
+
+                <!-- LƯỚI BÀI ĐĂNG -->
+                <div class="match-grid" id="matchFeed">
+                    <!-- Dữ liệu sẽ được render bằng JS -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐĂNG TIN -->
+    <div class="modal-overlay" id="postModal">
+        <div class="modal-box">
+            <div class="modal-header"><span>Đăng tin tìm đối thủ</span><span class="close-modal" onclick="closePostModal()">&times;</span></div>
+            
+            <div class="form-group">
+                <label>Tên Đội của bạn</label>
+                <input type="text" id="p_teamName" placeholder="VD: FC Anh Em">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Loại Sân</label>
+                    <select id="p_pitchType">
+                        <option value="5">Sân 5 người</option>
+                        <option value="7">Sân 7 người</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Trình độ Đội</label>
+                    <select id="p_level">
+                        <option value="Trung bình yếu">Trung bình yếu (Mới chơi)</option>
+                        <option value="Trung bình">Trung bình</option>
+                        <option value="Trung bình khá">Trung bình khá (Đá giải)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ngày đá</label>
+                    <input type="date" id="p_date">
+                </div>
+                <div class="form-group">
+                    <label>Khung giờ</label>
+                    <input type="time" id="p_time">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Thể thức thanh toán</label>
+                <select id="p_paymentRule">
+                    <option value="Chia đôi tiền sân">🤝 Giao lưu (Chia đôi tiền sân)</option>
+                    <option value="Kèo 7/3 tiền sân">🔥 Kèo 7/3 (Thua trả 7, Thắng trả 3)</option>
+                    <option value="Kèo Nước (Chia đôi sân)">💧 Kèo Nước (Chia đôi sân, thua trả nước)</option>
+                    <option value="Thua trả 100% tiền sân">⚔️ Thi đấu (Thua trả 100% tiền sân)</option>
+                    <option value="Thua bao tất (Sân + Nước)">💸 Bao tất (Thua trả cả sân + nước)</option>
+                    <option value="Khác (Xem ghi chú)">📝 Khác (Thỏa thuận thêm)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Ghi chú thêm (Tùy chọn)</label>
+                <textarea id="p_note" rows="2" placeholder="Giao lưu vui vẻ, không quạu, yêu cầu mang bóng..."></textarea>
+            </div>
+            
+            <button class="btn btn-primary" style="margin-top: 8px; width: 100%;" onclick="submitPost()">Đăng lên Bảng tin</button>
+        </div>
+    </div>
+
+    <!-- MODAL NHẬN KÈO & ĐẶT CỌC -->
+    <div class="modal-overlay" id="acceptModal">
+        <div class="modal-box" style="width: 600px;">
+            <div class="modal-header"><span>Bắt Kèo & Đặt Cọc</span><span class="close-modal" onclick="closeAcceptModal()">&times;</span></div>
+            
+            <div class="match-summary" id="am_summary">
+                <!-- Nội dung tóm tắt kèo sinh ra bằng JS -->
+            </div>
+
+            <div class="accept-grid">
+                <!-- Cột trái: Form thông tin Đội B -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-weight: 700; font-size: 14px; color: var(--primary-green);">1. Nhập thông tin của bạn</div>
+                    <div class="form-group">
+                        <label>Tên Đội</label>
+                        <input type="text" id="am_teamBName" placeholder="VD: Sông Hàn FC">
+                    </div>
+                    <div class="form-group">
+                        <label>Số điện thoại liên hệ</label>
+                        <input type="tel" id="am_teamBPhone" placeholder="09xxxx...">
+                    </div>
+                </div>
+
+                <!-- Cột phải: QR Code Cọc -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-weight: 700; font-size: 14px; color: #be185d;">2. Cọc chống bùng kèo</div>
+                    <div class="qr-payment-box">
+                        <span style="font-size: 12px; color: #9d174d; font-weight: 600;">Mã QR chuyển khoản Hệ thống</span>
+                        <img id="am_qrCode" src="" alt="QR">
+                        <span class="deposit-amt">100,000đ</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">Sẽ được trừ vào tiền sân lúc thanh toán.</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="margin-top: 12px; width: 100%;" onclick="confirmAcceptMatch()">Tôi đã chuyển khoản cọc & Chốt kèo</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('mainSidebar').classList.toggle('collapsed');
+        }
+
+        // Lấy ngày hiện tại format YYYY-MM-DD
+        let nowObj = new Date();
+        const TODAY_STR = nowObj.toISOString().split('T')[0];
+
+        // Gán sẵn giá trị mặc định cho ô chọn ngày trong form đăng tin
+        document.getElementById('p_date').value = TODAY_STR;
+
+        // MỘT SỐ BÀI ĐĂNG MẪU (Bổ sung thể thức đa dạng)
+        let posts = [
+            {
+                id: 1, teamName: "DataHouse FC", avatar: "DH", level: "Khá", pitchType: "5",
+                date: TODAY_STR, time: "18:00 - 19:30", paymentRule: "Kèo 7/3 tiền sân", note: "Đá cọ xát, yêu cầu đúng giờ.", status: "finding"
+            },
+            {
+                id: 2, teamName: "FPT Software", avatar: "FP", level: "Trung bình", pitchType: "7",
+                date: TODAY_STR, time: "19:00 - 20:30", paymentRule: "Kèo Nước (Chia đôi sân)", note: "Đội văn phòng, giao lưu ra mồ hôi là chính.", status: "finding"
+            },
+            {
+                id: 3, teamName: "Xây Dựng Hải Nam", avatar: "XD", level: "Trung bình", pitchType: "5",
+                date: "2026-06-12", time: "20:00 - 21:30", paymentRule: "Thua bao tất (Sân + Nước)", note: "Tìm đội cứng cựa, không đá xấu.", status: "matched", teamB: "FC Bất Động Sản"
+            }
+        ];
+
+        let currentPostIdToAccept = null;
+
+        function renderFeed() {
+            const feed = document.getElementById('matchFeed');
+            feed.innerHTML = '';
+            
+            const filterType = document.getElementById('filter-type').value;
+            const filterLevel = document.getElementById('filter-level').value;
+            const filterStatus = document.getElementById('filter-status').value;
+
+            let filteredPosts = posts.filter(p => {
+                let matchType = filterType === 'all' || p.pitchType === filterType;
+                let matchLevel = filterLevel === 'all' || p.level.toLowerCase().includes(filterLevel);
+                let matchStatus = filterStatus === 'all' || p.status === filterStatus;
+                return matchType && matchLevel && matchStatus;
+            });
+
+            if(filteredPosts.length === 0) {
+                feed.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Không tìm thấy đối thủ phù hợp với bộ lọc hiện tại.</div>';
+                return;
+            }
+
+            filteredPosts.forEach(p => {
+                let statusBadge = p.status === 'finding' 
+                    ? `<span class="status-badge status-finding">🔍 Đang tìm đối</span>` 
+                    : `<span class="status-badge status-matched">✅ Đã chốt với ${p.teamB}</span>`;
+
+                let actionButton = p.status === 'finding'
+                    ? `<button class="btn-accept" onclick="openAcceptModal(${p.id})">🔥 Bấm Nhận Kèo</button>`
+                    : `<button class="btn-contact" style="width:100%;" disabled>Trận đấu đã được chốt</button>`;
+
+                // Highlight kèo để dễ nhìn
+                let ruleIcon = "💰";
+                if(p.paymentRule.includes('7/3')) ruleIcon = "🔥";
+                if(p.paymentRule.includes('Nước')) ruleIcon = "💧";
+                if(p.paymentRule.includes('bao tất')) ruleIcon = "💸";
+
+                feed.innerHTML += `
+                    <div class="match-card">
+                        <div class="mc-header">
+                            <div class="team-info">
+                                <div class="team-avatar">${p.avatar}</div>
+                                <div>
+                                    <div class="team-name">${p.teamName}</div>
+                                    <div class="team-level">Trình độ: ${p.level}</div>
+                                </div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        
+                        <div class="mc-body">
+                            <div class="mc-detail-row">
+                                <span class="mc-icon">📅</span> <b>Thời gian:</b> ${p.date} (${p.time})
+                            </div>
+                            <div class="mc-detail-row">
+                                <span class="mc-icon">⚽</span> <b>Loại sân:</b> Sân ${p.pitchType} người
+                            </div>
+                            <div class="mc-detail-row">
+                                <span class="mc-icon">${ruleIcon}</span> <b style="color:var(--primary-green);">${p.paymentRule}</b>
+                            </div>
+                            ${p.note ? `<div class="mc-note">"${p.note}"</div>` : ''}
+                        </div>
+
+                        <div class="mc-footer">
+                            ${actionButton}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterPosts() { renderFeed(); }
+
+        // --- ĐĂNG TIN MỚI ---
+        function openPostModal() { document.getElementById('postModal').classList.add('active'); }
+        function closePostModal() { document.getElementById('postModal').classList.remove('active'); }
+        
+        function submitPost() {
+            let teamName = document.getElementById('p_teamName').value;
+            let type = document.getElementById('p_pitchType').value;
+            let level = document.getElementById('p_level').value;
+            let date = document.getElementById('p_date').value || TODAY_STR;
+            let time = document.getElementById('p_time').value || '19:00';
+            let rule = document.getElementById('p_paymentRule').value;
+            let note = document.getElementById('p_note').value;
+
+            if(!teamName || !time) { alert('Vui lòng nhập Tên đội và Khung giờ!'); return; }
+
+            posts.unshift({
+                id: Date.now(),
+                teamName: teamName,
+                avatar: teamName.substring(0,2).toUpperCase(),
+                level: level,
+                pitchType: type,
+                date: date,
+                time: time,
+                paymentRule: rule,
+                note: note,
+                status: 'finding'
+            });
+
+            closePostModal();
+            renderFeed();
+        }
+
+        // --- LUỒNG NHẬN KÈO & CỌC ---
+        function openAcceptModal(postId) {
+            currentPostIdToAccept = postId;
+            let post = posts.find(p => p.id === postId);
+            
+            document.getElementById('am_summary').innerHTML = `
+                <b>Trận:</b> ${post.teamName} vs [Đội của bạn]<br>
+                <b>Lịch:</b> Sân ${post.pitchType} người | ${post.time} ngày ${post.date}<br>
+                <b style="color:var(--primary-green);">Thể thức:</b> ${post.paymentRule}
+            `;
+
+            document.getElementById('am_qrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=COC_KEO_${post.id}_100000`;
+            
+            document.getElementById('am_teamBName').value = '';
+            document.getElementById('am_teamBPhone').value = '';
+
+            document.getElementById('acceptModal').classList.add('active');
+        }
+
+        function closeAcceptModal() { document.getElementById('acceptModal').classList.remove('active'); }
+
+        function confirmAcceptMatch() {
+            let nameB = document.getElementById('am_teamBName').value;
+            let phoneB = document.getElementById('am_teamBPhone').value;
+
+            if(!nameB || !phoneB) { alert("Vui lòng nhập Tên Đội và SĐT của bạn!"); return; }
+
+            let post = posts.find(p => p.id === currentPostIdToAccept);
+            post.status = 'matched';
+            post.teamB = nameB;
+
+            closeAcceptModal();
+            renderFeed();
+
+            alert(`🎉 CHÚC MỪNG! BẠN ĐÃ CHỐT KÈO THÀNH CÔNG.\n\nHệ thống đã ghi nhận 100,000đ tiền cọc của đội [${nameB}].\n1 Lịch Đặt Sân tự động đã được tạo trên hệ thống quản lý của chủ sân.`);
+        }
+
+        // Khởi tạo
+        renderFeed();
+    </script>
+</body>
+</html>

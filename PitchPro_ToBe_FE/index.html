@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12382f">
+  <title>PitchPro · Quản lý sân & đối soát doanh thu</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script defer src="assets/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+      <a href="#tong-quan" class="brand" aria-label="PitchPro trang chủ">
+        <span class="brand-mark">P<span class="brand-mark-dot"></span></span>
+        <span class="brand-title">Pitch<span>Pro</span><small>OPERATIONS CONSOLE</small></span>
+      </a>
+      <div class="workspace-switch"><span class="workspace-symbol">⚽</span><span><strong>Sân bóng Thành Công</strong><small>Không gian quản lý</small></span><span class="workspace-arrow">⌄</span></div>
+      <p class="nav-label">TỔNG QUAN</p>
+      <nav class="nav-main">
+        <a class="nav-link" data-page="tong-quan" href="#tong-quan"><span class="nav-glyph">▦</span><span>Bảng điều khiển</span></a>
+        <a class="nav-link" data-page="lich-san" href="#lich-san"><span class="nav-glyph">▤</span><span>Lịch & đặt sân</span></a>
+        <a class="nav-link" data-page="hoa-don" href="#hoa-don"><span class="nav-glyph">▣</span><span>Hóa đơn & thanh toán</span><span class="nav-count" id="navBillCount">0</span></a>
+        <a class="nav-link" data-page="kho-hang" href="#kho-hang"><span class="nav-glyph">◈</span><span>Kho & dịch vụ</span></a>
+      </nav>
+      <p class="nav-label">KIỂM SOÁT DOANH THU</p>
+      <nav class="nav-main">
+        <a class="nav-link" data-page="doi-soat" href="#doi-soat"><span class="nav-glyph">⇄</span><span>Đối soát cuối ngày</span></a>
+        <a class="nav-link" data-page="ngoai-le" href="#ngoai-le"><span class="nav-glyph">◇</span><span>Yêu cầu & ngoại lệ</span><span class="nav-count" id="navIssueCount">0</span></a>
+        <a class="nav-link" data-page="nhat-ky" href="#nhat-ky"><span class="nav-glyph">◷</span><span>Nhật ký thao tác</span></a>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-note"><span class="mini-dot"></span><strong>MÔ HÌNH TO-BE</strong><p>Quy trình được thiết kế theo tài liệu BTH3.1 và BTH3.2.</p></div>
+      <div class="sidebar-foot"><span class="avatar">PP</span><div><strong>PitchPro Demo</strong><small>Frontend prototype</small></div><span>⋮</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="header-left"><button id="mobileMenu" class="icon-button mobile-menu" type="button" aria-label="Mở menu">☰</button><span class="breadcrumb-muted">Quản lý vận hành</span><span class="breadcrumb-slash">/</span><strong id="breadcrumbCurrent">Bảng điều khiển</strong></div>
+        <div class="top-actions"><span class="demo-pill"><span class="mini-dot"></span> Dữ liệu demo</span><label class="role-label" for="roleSelect">Vai trò</label><select id="roleSelect" class="role-select"><option value="staff">Nhân viên</option><option value="manager">Quản lý</option></select><span class="avatar avatar-top">PP</span></div>
+      </header>
+      <div class="main-content" id="appContent" aria-live="polite"></div>
+    </main>
+  </div>
+  <div id="modalRoot"></div>
+  <div id="toastRoot" role="status" aria-live="polite"></div>
+</body>
+</html>

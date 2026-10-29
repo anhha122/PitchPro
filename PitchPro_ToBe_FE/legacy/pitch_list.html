@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PitchPro Manager - Hoàn Chỉnh</title>
+    <style>
+        :root {
+            --bg-color: #f3f7f4; --sidebar-bg: #ffffff; --primary-green: #0a5c36;
+            --primary-green-hover: #064225; --border-color: #e2e8f0; --text-dark: #1e293b;
+            --text-muted: #64748b; --danger-color: #ef4444;
+            --status-using-bg: #fee2e2; --status-using-text: #ef4444;
+            --status-empty-bg: #d1fae5; --status-empty-text: #10b981;
+            --status-booked-bg: #e0e7ff; --status-booked-text: #6366f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* SIDEBAR LEFT */
+        .sidebar-left { width: 240px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; transition: width 0.3s ease; z-index: 50; }
+        .sidebar-left.collapsed { width: 80px; align-items: center; padding: 24px 8px; }
+        .sidebar-left.collapsed .brand-full, .sidebar-left.collapsed .brand-subtext { display: none; }
+        .sidebar-left.collapsed .brand-mini { display: block !important; font-size: 24px; color: var(--primary-green); font-weight: 800; text-align: center; }
+        .sidebar-left.collapsed .nav-text { display: none; }
+        .sidebar-left.collapsed .menu-item { justify-content: center; width: 48px; padding: 12px 0; }
+        .sidebar-left.collapsed .btn-add-booking { width: 48px; height: 48px; border-radius: 50%; padding: 0; display: flex; justify-content: center; align-items: center; }
+        
+        .brand { margin-bottom: 32px; padding-left: 8px; white-space: nowrap; overflow: hidden;}
+        .brand-full { color: var(--primary-green); font-size: 24px; font-weight: 800; line-height: 1.2; }
+        .brand-subtext { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+        .menu-list { list-style: none; display: flex; flex-direction: column; gap: 8px; width: 100%;}
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; color: var(--text-dark); text-decoration: none; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden;}
+        .menu-item.active { background-color: #e6f0eb; color: var(--primary-green); font-weight: 600; border-left: 4px solid var(--primary-green); }
+        .nav-icon { font-size: 16px; }
+        .sidebar-bottom { margin-top: auto; padding-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center;}
+
+        /* MAIN CONTAINER & TOPBAR */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+        .btn-toggle-sidebar { background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-toggle-sidebar:hover { background-color: #f1f5f9; }
+        .search-box { position: relative; width: 300px; }
+        .search-box input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border-color); border-radius: 20px; background-color: #f8fafc; outline: none; font-size: 14px;}
+        .btn-quick-sell { background-color: #e6f0eb; color: var(--primary-green); border: 1px solid #c2e0d1; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; font-size: 14px;}
+        
+        .content-wrapper { flex: 1; display: flex; overflow: hidden; }
+
+        /* PITCH DASHBOARD */
+        .pitch-dashboard { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column;}
+        .content-header { display: flex; justify-content: space-between; margin-bottom: 16px; align-items: flex-start; flex-shrink: 0;}
+        
+        /* WEEKLY CALENDAR STRIP */
+        .weekly-calendar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; background: #fff; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); flex-shrink: 0;}
+        .cal-arrow { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: bold; color: var(--text-dark); display: flex; align-items: center; justify-content: center;}
+        .days-container { display: flex; gap: 8px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+        .day-card { flex: 1; min-width: 80px; text-align: center; padding: 8px 0; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;}
+        .day-card.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+        .day-name { font-size: 11px; display: block; margin-bottom: 4px; opacity: 0.8;}
+        .day-date { font-size: 15px; font-weight: bold; }
+
+        /* TIMELINE DỌC (VERTICAL) */
+        .timeline-wrapper { background: #fff; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; display: flex; flex-direction: column; overflow: hidden; height: 350px; flex-shrink: 0;}
+        .timeline-title { padding: 12px 16px; font-weight: 700; font-size: 14px; border-bottom: 1px solid var(--border-color); background: #f8fafc; flex-shrink: 0;}
+        .timeline-header { display: flex; border-bottom: 1px solid var(--border-color); background: #f1f5f9; flex-shrink: 0;}
+        .tl-corner { width: 60px; flex-shrink: 0; border-right: 1px solid var(--border-color); background: #f8fafc;}
+        .tl-pitch-headers { display: flex; flex: 1; overflow-x: hidden;}
+        .tl-pitch-header-cell { flex: 1; min-width: 100px; text-align: center; padding: 10px 4px; border-right: 1px solid var(--border-color); font-weight: 700; font-size: 13px; color: var(--text-dark); display: flex; flex-direction: column; justify-content: center; }
+        .tl-pitch-header-cell span { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-top: 2px;}
+        .tl-pitch-header-cell:last-child { border-right: none; }
+        .timeline-body { display: flex; flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; scroll-behavior: smooth;}
+        .tl-time-axis { width: 60px; flex-shrink: 0; border-right: 1px solid var(--border-color); background: #f8fafc; height: 1440px; }
+        .tl-hour-label { height: 60px; display: flex; justify-content: center; padding-top: 4px; font-size: 11px; color: var(--text-muted); font-weight: bold; border-bottom: 1px solid transparent; box-sizing: border-box;}
+        .tl-grid { display: flex; flex: 1; background-image: repeating-linear-gradient(to bottom, transparent, transparent 59px, #e2e8f0 60px); height: 1440px; }
+        .tl-pitch-col { flex: 1; min-width: 100px; border-right: 1px solid var(--border-color); position: relative; }
+        .tl-pitch-col:last-child { border-right: none; }
+        .tl-block { position: absolute; left: 4px; right: 4px; border-radius: 6px; padding: 6px; font-size: 11px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; z-index: 5; border-left: 4px solid var(--primary-green);}
+        .tl-block:hover { transform: scale(1.02); z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.15);}
+        .tl-block-active { background: #d1fae5; color: #065f46; border-top: 1px solid #10b981; border-right: 1px solid #10b981; border-bottom: 1px solid #10b981;}
+        .tl-block-title { font-weight: 800; font-size: 12px; margin-bottom: 2px;}
+        .tl-block-past { display: none !important; } /* Tự ẩn khi hết giờ */
+
+        /* PITCH CARDS */
+        .pitch-filter-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-shrink: 0;}
+        .pitch-tab { background: none; border: none; font-size: 14px; font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 6px 12px; border-radius: 6px;}
+        .pitch-tab.active { background-color: #e0e7ff; color: #4f46e5; } 
+        .pitch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-bottom: 40px; flex-shrink: 0;}
+        .pitch-card { background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;}
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .status-badge { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; }
+        .status-using { background-color: var(--status-using-bg); color: var(--status-using-text); }
+        .status-empty { background-color: var(--status-empty-bg); color: var(--status-empty-text); }
+        .status-booked { background-color: var(--status-booked-bg); color: var(--status-booked-text); }
+        .card-body { background-color: #f8fafc; border-radius: 8px; padding: 12px; min-height: 64px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;}
+        .info-col { display: flex; flex-direction: column; gap: 4px; border-left: 1px solid #e2e8f0; padding-left: 12px;}
+        .info-col:first-child { border-left: none; padding-left: 0;}
+        .info-label { font-size: 11px; color: var(--text-muted); }
+        .info-value { font-weight: 600; font-size: 13px; color: var(--text-dark); display: flex; align-items: center; gap: 6px;}
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+        .btn { padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+        .btn-primary { background-color: var(--primary-green); color: #ffffff; }
+        .btn-secondary { background-color: #ffffff; color: var(--primary-green); border: 1px solid var(--primary-green); }
+        .btn-full { grid-column: span 2; width: 100%;}
+        
+        /* SIDEBAR RIGHT (INVOICES) */
+        .sidebar-right { width: 380px; background-color: #ffffff; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; z-index: 40;}
+        .sidebar-right-header { padding: 20px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .invoice-tabs { display: flex; gap: 8px; padding: 0 20px 12px 20px; border-bottom: 1px solid var(--border-color); }
+        .tab-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: #f8fafc; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;}
+        .tab-btn.active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+        .pending-list { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .pending-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; background-color: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+        .pending-card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14px; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; }
+        .type-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .type-team { background-color: #e0e7ff; color: #4f46e5; }
+        .type-retail { background-color: #fce7f3; color: #db2777; }
+        .pending-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 4px; padding: 4px 0; }
+        .item-info { display: flex; flex-direction: column; flex: 1; }
+        .item-name { color: var(--text-dark); }
+        .item-price { color: var(--text-muted); font-size: 12px; }
+        .btn-delete-item { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 14px; border-radius: 4px; }
+        .btn-delete-item:hover { background-color: #fee2e2; }
+        .pending-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .pending-total { font-weight: 800; color: var(--primary-green); font-size: 16px; }
+        .btn-pay-now { background-color: var(--primary-green); color: #ffffff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+        .badge-count { background-color: var(--status-using-text); color: #ffffff; font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background-color: #ffffff; border-radius: 12px; width: 450px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto;}
+        .modal-header { font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .close-modal { cursor: pointer; font-size: 20px; color: var(--text-muted); }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 13px; font-weight: 600; }
+        .form-group select, .form-group input { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size:14px; }
+        .row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } 
+
+        .deposit-section { background-color: #fdf2f8; border: 1px dashed #fbcfe8; padding: 12px; border-radius: 8px; display: none; }
+        .deposit-title { font-size: 13px; font-weight: 600; color: #be185d; margin-bottom: 8px;}
+        .deposit-options { display: flex; gap: 10px; }
+        .deposit-opt { flex: 1; text-align: center; border: 1px solid #fbcfe8; background: #fff; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #be185d;}
+        .deposit-opt.active { background: #be185d; color: #fff; border-color: #be185d; }
+        .alert-error { background-color: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 500; display: none; border: 1px solid #fecaca;}
+        .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 30px; font-style: italic; }
+
+        .payment-methods { display: flex; gap: 12px; margin-bottom: 10px; }
+        .method-card { flex: 1; border: 2px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; font-weight: 600; color: var(--text-muted); }
+        .method-card.active { border-color: var(--primary-green); background-color: #e6f0eb; color: var(--primary-green); }
+        .qr-section { display: none; text-align: center; padding: 16px; background-color: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color); }
+        .qr-section.active { display: block; }
+        .bill-details { font-family: 'Courier New', Courier, monospace; background-color: #fffdf5; border: 1px solid #f0e6cc; padding: 16px; border-radius: 6px; font-size: 13px; }
+        .bill-line { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .bill-divider { border-bottom: 1px dashed #cbd5e1; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar-left" id="mainSidebar">
+        <div class="brand">
+            <h1 class="brand-full">PitchPro</h1>
+            <h1 class="brand-mini" style="display: none;">P</h1>
+            <p class="brand-subtext">Cơ sở Thể thao Cao cấp</p>
+        </div>
+        
+        <ul class="menu-list">
+            <li><a href="#" class="menu-item"><span class="nav-icon">📊</span> <span class="nav-text">Bảng điều khiển</span></a></li>
+            <li><a href="pitch_list.html" class="menu-item active"><span class="nav-icon">⚽</span> <span class="nav-text">Danh sách sân</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">📦</span> <span class="nav-text">Kho hàng</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">👥</span> <span class="nav-text">Nhân viên</span></a></li>
+            <li><a href="#" class="menu-item"><span class="nav-icon">🏆</span> <span class="nav-text">Giải đấu</span></a></li>
+            <li><a href="comnunity.html" class="menu-item"><span class="nav-icon">🌐</span> <span class="nav-text">Cộng đồng</span></a></li>
+        </ul>
+        
+        <div class="sidebar-bottom">
+            <button class="btn btn-primary btn-add-booking" onclick="openBookingModal()" style="width:100%; margin-bottom: 12px; font-size:15px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span class="icon-plus" style="font-size:18px;">+</span> <span class="nav-text">Thêm Đặt Sân</span>
+            </button>
+            <ul class="menu-list">
+                <li><a href="#" class="menu-item" style="padding: 8px 12px;"><span class="nav-icon">⚙️</span> <span class="nav-text">Cài đặt</span></a></li>
+                <li><a href="#" class="menu-item" style="padding: 8px 12px;"><span class="nav-icon">❓</span> <span class="nav-text">Hỗ trợ</span></a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="topbar">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="search-box"><input type="text" placeholder="Tìm kiếm..."></div>
+            </div>
+            <button class="btn-quick-sell" onclick="openQuickSellModal()">🛒 Bán hàng nhanh</button>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="pitch-dashboard">
+                <div class="content-header">
+                    <div><h2>Lịch Sân Trực Tuyến</h2></div>
+                </div>
+
+                <div class="weekly-calendar">
+                    <button class="cal-arrow">&lt;</button>
+                    <div class="days-container" id="weekStrip"></div>
+                    <button class="cal-arrow">&gt;</button>
+                </div>
+
+                <div class="timeline-wrapper">
+                    <div class="timeline-title">Bảng Theo Dõi Khung Giờ (24H)</div>
+                    <div class="timeline-header">
+                        <div class="tl-corner"></div>
+                        <div class="tl-pitch-headers" id="tlPitchHeaders"></div>
+                    </div>
+                    <div class="timeline-body" id="timelineBody">
+                        <div class="tl-time-axis" id="tlTimeAxis"></div>
+                        <div class="tl-grid" id="tlGrid"></div>
+                    </div>
+                </div>
+
+                <div class="pitch-filter-tabs">
+                    <button class="pitch-tab active" id="p-filter-all" onclick="setPitchFilter('all')">Tất cả (8)</button>
+                    <button class="pitch-tab" id="p-filter-5" onclick="setPitchFilter('5')">Sân 5 người (5)</button>
+                    <button class="pitch-tab" id="p-filter-7" onclick="setPitchFilter('7')">Sân 7 người (3)</button>
+                </div>
+
+                <div class="pitch-grid" id="mainPitchGrid"></div>
+            </div>
+
+            <div class="sidebar-right">
+                <div class="sidebar-right-header">
+                    <h2 style="font-size: 16px; font-weight: 700;">⏳ Hóa đơn chờ xử lý</h2>
+                    <span class="badge-count" id="pendingCount">0</span>
+                </div>
+                <div class="invoice-tabs">
+                    <button class="tab-btn active" id="inv-tab-all" onclick="changeInvoiceFilter('all')">Tất cả</button>
+                    <button class="tab-btn" id="inv-tab-team" onclick="changeInvoiceFilter('team')">Đội bóng</button>
+                    <button class="tab-btn" id="inv-tab-retail" onclick="changeInvoiceFilter('retail')">Khách lẻ</button>
+                </div>
+                <div class="pending-list" id="pendingList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bookingModal">
+        <div class="modal-box" style="width: 500px;">
+            <div class="modal-header"><span>📅 Thêm Đặt Sân</span><span class="close-modal" onclick="closeBookingModal()">&times;</span></div>
+            <div class="alert-error" id="bookingAlert"></div>
+            <div class="row-group">
+                <div class="form-group"><label>Ngày đặt</label><input type="date" id="b_date" onchange="checkDepositLogic()" required></div>
+                <div class="form-group"><label>Chọn Sân</label><select id="b_pitchId"></select></div>
+            </div>
+            <div class="row-group">
+                <div class="form-group"><label>Giờ bắt đầu</label><input type="time" id="b_startTime" required></div>
+                <div class="form-group"><label>Giờ kết thúc</label><input type="time" id="b_endTime" required></div>
+            </div>
+            <div class="deposit-section" id="depositSection">
+                <div class="deposit-title">💰 Yêu cầu cọc (Do đặt trước ngày)</div>
+                <div class="deposit-options">
+                    <div class="deposit-opt" onclick="selectDeposit(40)" id="dep-40">40%</div>
+                    <div class="deposit-opt active" onclick="selectDeposit(50)" id="dep-50">50%</div>
+                    <div class="deposit-opt" onclick="selectDeposit(60)" id="dep-60">60%</div>
+                </div>
+                <input type="hidden" id="b_depositRate" value="50">
+            </div>
+            <div class="form-group"><label>Tên người đặt</label><input type="text" id="b_name" required></div>
+            <div class="form-group"><label>Số điện thoại</label><input type="tel" id="b_phone" required></div>
+            <button class="btn btn-primary btn-full" style="margin-top: 10px;" onclick="submitBooking()">Xác nhận đặt sân</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="quickSellModal">
+        <div class="modal-box">
+            <div class="modal-header"><span>🛒 Bán hàng lẻ</span><span class="close-modal" onclick="closeQuickSellModal()">&times;</span></div>
+            <div class="form-group">
+                <label>Vật phẩm</label>
+                <select id="modalProduct">
+                    <option value="Nước suối Aquafina|10000">Nước suối Aquafina - 10,000đ</option>
+                    <option value="Bò húc|15000">Bò húc - 15,000đ</option>
+                    <option value="Keo quấn cổ chân|20000">Keo quấn cổ chân - 20,000đ</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Số lượng</label><input type="number" id="modalQty" value="1" min="1"></div>
+            <div class="form-group"><label>Gộp hóa đơn</label><select id="modalTargetBill"></select></div>
+            <button class="btn btn-primary btn-full" onclick="submitQuickSell()">Xác nhận</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="checkoutModal">
+        <div class="modal-box">
+            <div class="modal-header"><span>🧾 Thanh toán & In Bill</span><span class="close-modal" onclick="closeCheckoutModal()">&times;</span></div>
+            <div class="bill-details" id="billInvoicePrint"></div>
+            <label style="font-weight: 600; font-size: 14px; margin-top: 10px;">Phương thức thanh toán:</label>
+            <div class="payment-methods">
+                <div class="method-card active" id="method-cash" onclick="selectPaymentMethod('cash')">💵 Tiền mặt</div>
+                <div class="method-card" id="method-qr" onclick="selectPaymentMethod('qr')">📱 Quét mã QR</div>
+            </div>
+            <div class="qr-section" id="qrSection">
+                <img id="qrImage" src="" alt="QR Code" style="width:150px; height:150px;">
+                <p style="font-size: 13px; font-weight: 600; margin-top: 8px;">Khách hàng quét mã để thanh toán</p>
+            </div>
+            <button class="btn btn-primary btn-full" id="btnSubmitPayment" onclick="confirmPaymentFinished()">Đã nhận Tiền Mặt & In Bill</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('mainSidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        let nowObj = new Date();
+        const TODAY_STR = nowObj.toISOString().split('T')[0];
+        let viewDateStr = TODAY_STR; 
+
+        // DATA 8 SÂN
+        let pitches = [
+            { id: 1, name: 'Sân 1', type: '5', bookings: [{ date: TODAY_STR, name: 'Nguyễn Văn A', start: '17:00', end: '18:30', status: 'using' }, { date: TODAY_STR, name: 'Tài FC', start: '19:00', end: '20:30', status: 'booked' }] },
+            { id: 2, name: 'Sân 2', type: '5', bookings: [] },
+            { id: 3, name: 'Sân 3', type: '5', bookings: [{ date: TODAY_STR, name: 'Trần B', start: '19:00', end: '20:30', status: 'booked' }] },
+            { id: 4, name: 'Sân 4', type: '5', bookings: [] },
+            { id: 5, name: 'Sân 5', type: '5', bookings: [] },
+            { id: 6, name: 'Sân 6', type: '7', bookings: [{ date: TODAY_STR, name: 'FC Cường', start: '16:30', end: '18:00', status: 'using' }] },
+            { id: 7, name: 'Sân 7', type: '7', bookings: [] },
+            { id: 8, name: 'Sân 8', type: '7', bookings: [] }
+        ];
+
+        // DATA HÓA ĐƠN
+        let invoices = [
+            {
+                id: 'inv-sample-1', name: 'Sân 1 - Nguyễn Văn A', type: 'team', status: 'Đang đá',
+                items: [{ id: 'i1', name: 'Tiền sân (Tạm tính)', price: 300000, isDeletable: false }]
+            }
+        ];
+        
+        let currentPitchFilter = 'all';
+        let currentInvoiceFilter = 'all';
+        let currentCheckoutId = null;
+        let currentMethod = 'cash';
+
+        function timeToMins(t) { let [h, m] = t.split(':').map(Number); return h * 60 + m; }
+
+        // ==========================================
+        // RENDER LỊCH TUẦN
+        // ==========================================
+        function initWeeklyCalendar() {
+            const container = document.getElementById('weekStrip');
+            const daysOfWeek = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            let html = '';
+            for(let i = 0; i < 7; i++) {
+                let iterDate = new Date(nowObj);
+                iterDate.setDate(nowObj.getDate() + i);
+                let dateVal = iterDate.toISOString().split('T')[0];
+                let dayName = i === 0 ? "Hôm nay" : daysOfWeek[iterDate.getDay()];
+                let isActive = dateVal === viewDateStr ? 'active' : '';
+                let dd = String(iterDate.getDate()).padStart(2, '0');
+                let mm = String(iterDate.getMonth() + 1).padStart(2, '0');
+                
+                html += `<div class="day-card ${isActive}" onclick="changeViewDate('${dateVal}')"><span class="day-name">${dayName}</span><span class="day-date">${dd}/${mm}</span></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function changeViewDate(dateStr) { 
+            viewDateStr = dateStr; 
+            initWeeklyCalendar(); 
+            renderPitches(); 
+            renderTimeline(); 
+        }
+
+        // ==========================================
+        // RENDER BẢNG TIMELINE DỌC (GANTT)
+        // ==========================================
+        function renderTimeline() {
+            let filteredPitches = currentPitchFilter !== 'all' ? pitches.filter(p => p.type === currentPitchFilter) : pitches;
+            
+            // Render Header Sân
+            let pitchHeadersHtml = '';
+            filteredPitches.forEach(p => { pitchHeadersHtml += `<div class="tl-pitch-header-cell">${p.name}<span>Loại ${p.type} người</span></div>`; });
+            document.getElementById('tlPitchHeaders').innerHTML = pitchHeadersHtml;
+
+            // Render Cột Giờ
+            let timeHtml = '';
+            for(let h=0; h<24; h++) { timeHtml += `<div class="tl-hour-label">${h.toString().padStart(2, '0')}:00</div>`; }
+            document.getElementById('tlTimeAxis').innerHTML = timeHtml;
+
+            let realNow = new Date();
+            let currentTotalMins = realNow.getHours() * 60 + realNow.getMinutes();
+            let isViewingToday = (viewDateStr === TODAY_STR);
+            let isViewingPast = (viewDateStr < TODAY_STR);
+
+            // Render Khối Giờ Đặt Sân
+            let gridHtml = '';
+            filteredPitches.forEach(p => {
+                let colHtml = `<div class="tl-pitch-col">`;
+                p.bookings.forEach(b => {
+                    if(b.date === viewDateStr) {
+                        let startMins = timeToMins(b.start), endMins = timeToMins(b.end);
+                        let topPx = startMins, heightPx = endMins - startMins;
+                        
+                        let isPast = false;
+                        if (isViewingPast) isPast = true;
+                        if (isViewingToday && endMins <= currentTotalMins) isPast = true;
+
+                        let displayClass = isPast ? 'tl-block-past' : 'tl-block-active';
+                        colHtml += `<div class="tl-block ${displayClass}" style="top: ${topPx}px; height: ${heightPx}px;" title="${b.name} (${b.start}-${b.end})"><div class="tl-block-title">${b.name}</div><div>${b.start} - ${b.end}</div></div>`;
+                    }
+                });
+                colHtml += `</div>`; gridHtml += colHtml;
+            });
+            document.getElementById('tlGrid').innerHTML = gridHtml;
+
+            // Cuộn mặc định tới 14h
+            setTimeout(() => { let scrollArea = document.getElementById('timelineBody'); if(scrollArea) scrollArea.scrollTop = 14 * 60; }, 100);
+        }
+
+        // ==========================================
+        // RENDER LƯỚI THẺ SÂN BÓNG
+        // ==========================================
+        function setPitchFilter(type) {
+            currentPitchFilter = type;
+            document.querySelectorAll('.pitch-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('p-filter-' + type).classList.add('active');
+            renderPitches(); renderTimeline(); 
+        }
+
+        function renderPitches() {
+            const grid = document.getElementById('mainPitchGrid');
+            grid.innerHTML = '';
+            let filteredPitches = currentPitchFilter !== 'all' ? pitches.filter(p => p.type === currentPitchFilter) : pitches;
+            let realNow = new Date(), currentTotalMins = realNow.getHours() * 60 + realNow.getMinutes();
+
+            filteredPitches.forEach(pitch => {
+                let todaysBookings = pitch.bookings.filter(b => b.date === viewDateStr);
+                let upcomingBookings = todaysBookings.filter(b => {
+                    if (viewDateStr < TODAY_STR) return false;
+                    if (viewDateStr === TODAY_STR && timeToMins(b.end) <= currentTotalMins) return false;
+                    return true;
+                });
+                upcomingBookings.sort((a,b) => timeToMins(a.start) - timeToMins(b.start));
+                let activeBooking = upcomingBookings.length > 0 ? upcomingBookings[0] : null;
+
+                let statusClass, statusText, bodyHtml, actionsHtml;
+
+                if (activeBooking && activeBooking.status === 'using') {
+                    statusClass = 'status-using'; statusText = 'Đang dùng';
+                    bodyHtml = `<div class="info-grid"><div class="info-col"><span class="info-label">Giờ đá</span><span class="info-value">🕒 ${activeBooking.start} - ${activeBooking.end}</span></div><div class="info-col"><span class="info-label">Người đặt</span><span class="info-value">${activeBooking.name}</span></div></div>`;
+                    actionsHtml = `<button class="btn btn-primary btn-full" onclick="releasePitch(${pitch.id}, '${activeBooking.name}', '${activeBooking.start}')">Trả sân / Tính tiền</button>`;
+                } else if (activeBooking && activeBooking.status === 'booked') {
+                    statusClass = 'status-booked'; statusText = 'Đã đặt';
+                    let depositBadge = activeBooking.deposit ? `<br><span style="color:#be185d; font-size:11px; font-weight:bold;">(Đã cọc ${activeBooking.deposit})</span>` : '';
+                    bodyHtml = `<div class="info-grid"><div class="info-col"><span class="info-label">Lịch đặt tới</span><span class="info-value">📅 ${activeBooking.start} - ${activeBooking.end}</span></div><div class="info-col"><span class="info-label">Người đặt</span><span class="info-value" style="display:block;">${activeBooking.name} ${depositBadge}</span></div></div>`;
+                    if(viewDateStr === TODAY_STR) { actionsHtml = `<button class="btn btn-primary btn-full" onclick="startUsingPitch(${pitch.id}, '${activeBooking.name}')">Nhận sân</button>`; } 
+                    else { actionsHtml = `<button class="btn btn-secondary btn-full">Chỉnh sửa</button>`; }
+                } else {
+                    statusClass = 'status-empty'; statusText = 'Còn trống';
+                    bodyHtml = `<div class="info-col" style="border:none; padding:0;"><span class="info-label">Trạng thái</span><span class="info-value">Sẵn sàng phục vụ</span></div>`;
+                    actionsHtml = `<button class="btn btn-primary btn-full" onclick="openBookingModal(${pitch.id})">Đặt ngay</button>`;
+                }
+
+                grid.innerHTML += `<div class="pitch-card"><div class="card-header"><div><div style="font-size:11px; color:var(--text-muted); font-weight:bold;">SÂN ${pitch.type} NGƯỜI</div><h3>${pitch.name}</h3></div><span class="status-badge ${statusClass}">${statusText}</span></div><div class="card-body" style="display:flex; align-items:center;">${bodyHtml}</div><div class="card-actions">${actionsHtml}</div></div>`;
+            });
+        }
+
+        // ==========================================
+        // LOGIC ĐẶT SÂN
+        // ==========================================
+        function openBookingModal(preselectPitchId = null) {
+            const select = document.getElementById('b_pitchId');
+            select.innerHTML = '';
+            pitches.forEach(p => select.innerHTML += `<option value="${p.id}" ${preselectPitchId === p.id ? 'selected' : ''}>${p.name}</option>`);
+            document.getElementById('b_date').value = viewDateStr; 
+            document.getElementById('bookingAlert').style.display = 'none';
+            checkDepositLogic(); 
+            document.getElementById('bookingModal').classList.add('active');
+        }
+
+        function closeBookingModal() { document.getElementById('bookingModal').classList.remove('active'); }
+        function checkDepositLogic() {
+            let selectedDate = document.getElementById('b_date').value;
+            let depSection = document.getElementById('depositSection');
+            if (selectedDate > TODAY_STR) { depSection.style.display = 'block'; } else { depSection.style.display = 'none'; }
+        }
+
+        function selectDeposit(val) {
+            document.querySelectorAll('.deposit-opt').forEach(el => el.classList.remove('active'));
+            document.getElementById(`dep-${val}`).classList.add('active');
+            document.getElementById('b_depositRate').value = val;
+        }
+
+        function submitBooking() {
+            const pId = parseInt(document.getElementById('b_pitchId').value);
+            const date = document.getElementById('b_date').value, start = document.getElementById('b_startTime').value, end = document.getElementById('b_endTime').value, name = document.getElementById('b_name').value;
+            const alertBox = document.getElementById('bookingAlert');
+
+            if(!start || !end || !name) { alertBox.innerText = "Vui lòng nhập đủ thông tin!"; alertBox.style.display = 'block'; return; }
+            let sMins = timeToMins(start), eMins = timeToMins(end);
+            if(sMins >= eMins) { alertBox.innerText = "Giờ kết thúc sai!"; alertBox.style.display = 'block'; return; }
+
+            let pitch = pitches.find(p => p.id === pId), sameDayBookings = pitch.bookings.filter(b => b.date === date);
+
+            for(let b of sameDayBookings) {
+                let bs = timeToMins(b.start), be = timeToMins(b.end);
+                if (sMins < be && eMins > bs) {
+                    if (sMins < be && sMins >= bs) alertBox.innerHTML = `⚠️ Sân đang hoạt động! <br>Vui lòng chọn giờ sau <b>${b.end}</b>.`;
+                    else alertBox.innerHTML = `⚠️ Trùng lịch! Sân đã được <b>${b.name}</b> đặt lúc ${b.start}-${b.end}.`;
+                    alertBox.style.display = 'block'; return;
+                }
+            }
+
+            let depositVal = null;
+            if (date > TODAY_STR) depositVal = document.getElementById('b_depositRate').value + '%';
+
+            pitch.bookings.push({ date: date, name: name, start: start, end: end, status: 'booked', deposit: depositVal });
+            closeBookingModal(); renderPitches(); renderTimeline(); alert(`✅ Đặt sân thành công cho ngày ${date}!`);
+        }
+
+        function startUsingPitch(pId, bName) {
+            let p = pitches.find(p => p.id === pId);
+            let b = p.bookings.find(b => b.date === viewDateStr && b.name === bName);
+            b.status = 'using'; renderPitches(); renderTimeline();
+        }
+
+        function releasePitch(pId, bName, start) {
+            let p = pitches.find(p => p.id === pId);
+            p.bookings = p.bookings.filter(b => !(b.date === viewDateStr && b.name === bName));
+            renderPitches(); renderTimeline();
+            
+            // Tìm bill nếu có, không có thì tạo mới
+            let invoiceName = `Sân ${pId} - ${bName}`;
+            let existingInv = invoices.find(i => i.name === invoiceName);
+            if(!existingInv) {
+                invoices.push({ id: 'inv-'+Date.now(), name: invoiceName, type: 'team', status: 'Chờ thanh toán', items: [{ id: 'it1', name: `Tiền sân`, price: 300000, isDeletable:false }] });
+            } else {
+                existingInv.status = 'Chờ thanh toán';
+                existingInv.items[0].name = `Tiền sân`;
+            }
+            renderInvoices();
+        }
+
+        // ==========================================
+        // LOGIC HÓA ĐƠN & THANH TOÁN (BILLING)
+        // ==========================================
+        function changeInvoiceFilter(type) {
+            currentInvoiceFilter = type;
+            document.getElementById('inv-tab-all').classList.remove('active');
+            document.getElementById('inv-tab-team').classList.remove('active');
+            document.getElementById('inv-tab-retail').classList.remove('active');
+            document.getElementById('inv-tab-' + type).classList.add('active');
+            renderInvoices();
+        }
+
+        function renderInvoices() {
+            const list = document.getElementById('pendingList');
+            list.innerHTML = '';
+            
+            let filteredInvoices = invoices;
+            if (currentInvoiceFilter !== 'all') {
+                filteredInvoices = invoices.filter(inv => inv.type === currentInvoiceFilter);
+            }
+            
+            document.getElementById('pendingCount').innerText = filteredInvoices.length;
+            if(filteredInvoices.length === 0) { list.innerHTML = '<div class="empty-state">Không có hóa đơn chờ.</div>'; return; }
+
+            filteredInvoices.forEach(inv => {
+                let total = 0, itemsHtml = '';
+                inv.items.forEach(item => {
+                    total += item.price;
+                    const deleteBtn = item.isDeletable ? `<button class="btn-delete-item" onclick="deleteItem('${inv.id}', '${item.id}')">✖</button>` : `<div style="width: 28px;"></div>`;
+                    itemsHtml += `<div class="pending-item"><div class="item-info"><span class="item-name">${item.name}</span><span class="item-price">${item.price.toLocaleString()}đ</span></div>${deleteBtn}</div>`;
+                });
+                inv.total = total;
+                let typeTag = inv.type === 'team' ? '<span class="type-tag type-team">ĐỘI BÓNG</span>' : '<span class="type-tag type-retail">KHÁCH LẺ</span>';
+                
+                list.innerHTML += `
+                    <div class="pending-card">
+                        <div class="pending-card-header"><div><span style="display:block; font-size:15px;">${inv.name}</span>${typeTag}</div><span style="color:#f59e0b; font-size: 11px;">● ${inv.status}</span></div>
+                        <div>${itemsHtml}</div>
+                        <div class="pending-card-footer">
+                            <div>Tổng: <span class="pending-total">${inv.total.toLocaleString()}đ</span></div>
+                            <button class="btn-pay-now" onclick="openCheckoutModal('${inv.id}')">Tính Tiền</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function deleteItem(invId, itemId) {
+            if(confirm('Bạn có chắc muốn xóa vật phẩm này?')) {
+                let inv = invoices.find(i => i.id === invId);
+                if(inv) inv.items = inv.items.filter(item => item.id !== itemId);
+                renderInvoices();
+            }
+        }
+
+        function openQuickSellModal() {
+            const sel = document.getElementById('modalTargetBill');
+            sel.innerHTML = '<option value="retail">Khách lẻ vãng lai (Tạo Bill mới)</option>';
+            invoices.filter(inv => inv.type === 'team').forEach(inv => sel.innerHTML += `<option value="${inv.id}">Gộp vào: ${inv.name}</option>`);
+            document.getElementById('quickSellModal').classList.add('active');
+        }
+
+        function closeQuickSellModal() { document.getElementById('quickSellModal').classList.remove('active'); }
+
+        function submitQuickSell() {
+            const [name, price] = document.getElementById('modalProduct').value.split('|');
+            const qty = parseInt(document.getElementById('modalQty').value);
+            const targetId = document.getElementById('modalTargetBill').value;
+            const total = parseInt(price) * qty;
+            const newItem = { id: 'item-'+Date.now(), name: `${qty}x ${name.replace('Nước suối ', '').replace('Nước tăng lực ', '')}`, price: total, isDeletable: true };
+
+            if (targetId === 'retail') {
+                invoices.push({ id: 'inv-'+Date.now(), name: 'Khách lẻ vãng lai', type: 'retail', status: 'Chờ thanh toán', items: [newItem] });
+                changeInvoiceFilter('retail');
+            } else {
+                let inv = invoices.find(i => i.id === targetId);
+                if(inv) inv.items.push(newItem);
+                changeInvoiceFilter('team'); 
+            }
+            closeQuickSellModal(); 
+        }
+
+        function openCheckoutModal(invId) {
+            const inv = invoices.find(i => i.id === invId);
+            currentCheckoutId = invId;
+            let itemsLines = '';
+            inv.items.forEach((item, idx) => { itemsLines += `<div class="bill-line"><span>${idx+1}. ${item.name}</span><span>${item.price.toLocaleString()}đ</span></div>`; });
+            const timeStr = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+
+            document.getElementById('billInvoicePrint').innerHTML = `
+                <div style="text-align:center; font-weight:bold; margin-bottom:10px;">PITCHPRO MANAGER</div>
+                <div class="bill-line"><strong>Khách:</strong> <span style="font-size:14px; color:var(--primary-green); font-weight:bold;">${inv.name}</span></div>
+                <div class="bill-line"><strong>Giờ in:</strong> <span>${timeStr}</span></div>
+                <div class="bill-divider"></div>
+                ${itemsLines}
+                <div class="bill-divider"></div>
+                <div class="bill-line" style="font-size:15px; font-weight:bold; color:var(--primary-green)"><span>THÀNH TIỀN:</span><span>${inv.total.toLocaleString()}đ</span></div>
+            `;
+            
+            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=CK_PITCHPRO_${inv.total}`;
+            selectPaymentMethod('cash');
+            document.getElementById('checkoutModal').classList.add('active');
+        }
+
+        function closeCheckoutModal() { document.getElementById('checkoutModal').classList.remove('active'); }
+
+        function selectPaymentMethod(method) {
+            currentMethod = method;
+            document.getElementById('method-cash').className = method === 'cash' ? 'method-card active' : 'method-card';
+            document.getElementById('method-qr').className = method === 'qr' ? 'method-card active' : 'method-card';
+            document.getElementById('qrSection').className = method === 'qr' ? 'qr-section active' : 'qr-section';
+            
+            const btn = document.getElementById('btnSubmitPayment');
+            btn.innerHTML = method === 'cash' ? 'Đã nhận Tiền Mặt & In Bill' : 'Đã nhận Chuyển Khoản & In Bill';
+            btn.style.backgroundColor = method === 'cash' ? 'var(--primary-green)' : '#2563eb';
+        }
+
+        function confirmPaymentFinished() {
+            invoices = invoices.filter(inv => inv.id !== currentCheckoutId);
+            closeCheckoutModal(); 
+            renderInvoices();
+            alert(`Thanh toán hoàn tất! (Phương thức: ${currentMethod.toUpperCase()})`);
+        }
+
+        // ==========================================
+        // KHỞI CHẠY HỆ THỐNG
+        // ==========================================
+        initWeeklyCalendar();
+        renderPitches();
+        renderTimeline();
+        renderInvoices();
+    </script>
+</body>
+</html>
